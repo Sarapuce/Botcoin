@@ -24,10 +24,8 @@ def main(stdscr):
 
     wallet = Wallet()
 
-    wallet.place_order('A', 47675, 47685, 35000, 0.01)
-    wallet.place_order('V', 50000, 40000, 41000, 0.01)
-
     try:
+        
         print_header(stdscr)
         stdscr.refresh()
         stdscr.clrtobot()
@@ -36,13 +34,14 @@ def main(stdscr):
             time.sleep(1)
 
             wallet.update_price()
-            wallet.update_ema()
             wallet.update_orders()
+            wallet.check_new_candle()
             wallet.check_tp()
             
+
             print_price(stdscr, wallet.old_price, wallet.current_price)
             print_orders(stdscr, wallet.order_list)
-            print_ema(stdscr, wallet.ema5, wallet.ema20)
+            print_ema(stdscr, wallet.ema5[-2], wallet.ema20[-2], wallet.trend)
             print_budget(stdscr, wallet.budget)
 
             stdscr.refresh()
@@ -72,6 +71,9 @@ def print_orders(stdscr, order_list):
 
     rows, cols = stdscr.getmaxyx()
 
+    for i in range(0, rows):
+        stdscr.addstr(i, 40, ' ' * (cols - 41))
+
     for i, order in enumerate(order_list):
         if order['profit'] > 0:
             c = curses.color_pair(2)
@@ -88,50 +90,20 @@ def print_orders(stdscr, order_list):
         stdscr.addstr(4*i + 2, 50, 'Profit : {:.2f}'.format(order['profit']), c)
         stdscr.addstr(4*i + 2, 70, '{:.2f}%'.format(order['percent']), c)
 
-    for i in range(4*i + 3, rows):
-        stdscr.addstr(i, 40, ' ' * (cols - 41))
+
 
     
 
-def print_ema(stdscr, ema5, ema20):
-    stdscr.addstr(8, 0, "EMA 5  : {:.2f}".format(ema5))
-    stdscr.addstr(9, 0, "EMA 20 : {:.2f}".format(ema20))
+def print_ema(stdscr, ema5, ema20, trend):
+    stdscr.addstr(8, 0, "EMA 21 : {:.2f}".format(ema5))
+    stdscr.addstr(9, 0, "EMA 55 : {:.2f}".format(ema20))
+    if trend == 'up':
+        stdscr.addstr(8, 20, "↑", curses.color_pair(2))
+    else:
+        stdscr.addstr(8, 20, "↓", curses.color_pair(1))
 
 def print_budget(stdscr, budget):
     stdscr.addstr(11, 0, "Budget : {:.2f}".format(budget))
-
-
-# Sell an order if TP/SL are hit
-def check_tp(order_list):
-    current_price = get_price()
-    value = 0
-    for i, order in enumerate(order_list):
-        if order['type'] == 'A':
-            if current_price > order['TP'] or current_price < order['SL']:
-                print('Vente de A')
-                value += sell_order(order_list, i)
-        else:
-            if current_price < order['TP'] or current_price > order['SL']:
-                print(current_price)
-                print(order['TP'])
-                print(order['SL'])
-                value += sell_order(order_list, i)
-
-    return value
-
-
-# Calculate profit from each trade
-def update_orders(order_list, current_price):
-    for order in order_list:
-        price = order['price']
-        if order['type'] == 'V':
-            order['profit']  = (current_price - price) * order['quantity']
-            order['percent'] =  ((current_price / price) - 1) * 100
-        elif order['type'] == 'V':
-            order['profit']  = (price - current_price) * order['quantity']
-            order['percent'] =  ((price / current_price) - 1) * 100   
-
-
 
 if __name__ == '__main__':
     init_curses()

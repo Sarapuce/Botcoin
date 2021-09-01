@@ -10,9 +10,14 @@ class Wallet:
         self.old_price     = 0
         self.ema5          = 0
         self.ema20         = 0
+        self.order         = True
+        self.candle_id     = 0
+        self.trend         = ''
+        self.time          = '1m'
 
 
     def place_order(self, type_, SL, TP, price, qty):
+        print(type_, SL, TP, price, qty)
         self.order_list.append({'type' : type_, 'price' : price, 'quantity' : qty, 'value' : qty*price, 'current_value' : qty*price, 'SL' : SL, 'TP' : TP, 'profit' : 0, 'percent' : 0})
         self.budget -= qty*price
 
@@ -50,9 +55,35 @@ class Wallet:
         self.current_price = float(price)
 
     def update_ema(self):
-        self.ema5  = get_ema(5)
-        self.ema20 = get_ema(20)
+        self.ema5  = self.get_ema(21)
+        self.ema20 = self.get_ema(55)
+        if self.ema5[-2] > self.ema20[-2]:
+            self.trend = 'up'
+        else:
+            self.trend = 'down'
 
+    def check_cross(self):
+        if not self.order:
+            self.order = True
+            if self.ema5[-3] > self.ema20[-3] and self.ema5[-2] < self.ema20[-2]:
+                self.place_order('V', self.ema20[-2], self.current_price - ((self.ema20[-2] - self.current_price) * 1.5), self.current_price, 0.01)
+            elif self.ema5[-3] < self.ema20[-3] and self.ema5[-2] > self.ema20[-2]:
+                self.place_order('A', self.ema20[-2], self.current_price + ((self.current_price - self.ema20[-2]) * 1.5), self.current_price, 0.01)
+
+    def check_new_candle(self, symbol = 'BTCUSDT'):
+        url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
+        data = requests.get(url).json()
+        if self.candle_id != data[0][0]:
+            self.candle_id = data[0][0]
+            self.order = False
+            self.update_ema()
+            self.check_cross()
+
+    def get_ema(self, period, symbol = 'BTCUSDT'):
+        url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
+        data = requests.get(url).json()
+        close_prices = [float(i[4]) for i in data]
+        return calculate_ema(close_prices, period)
 
 def calculate_ema(prices, days, smoothing=2):
     smoothing = 2
@@ -61,8 +92,3 @@ def calculate_ema(prices, days, smoothing=2):
         ema.append((price * (smoothing / (1 + days))) + ema[-1] * (1 - (smoothing / (1 + days))))
     return ema
 
-def get_ema(period, symbol = 'BTCUSDT'):
-    url = 'https://api.binance.com/api/v3/klines?symbol='+ symbol +'&interval='+'1m'
-    data = requests.get(url).json()
-    close_prices = [float(i[4]) for i in data]
-    return calculate_ema(close_prices, period)[-2]
