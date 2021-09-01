@@ -34,6 +34,15 @@ class Wallet:
                 order['percent']       = ((price / self.current_price) - 1) * 100
                 order['current_value'] = order['quantity'] * self.current_price
 
+    def check_tp(self):
+        for i, order in enumerate(self.order_list):
+            if order['type'] == 'A':
+                if self.current_price > order['TP'] or self.current_price < order['SL']:
+                    self.sell_order(i)
+            else:
+                if self.current_price < order['TP'] or self.current_price > order['SL']:
+                    self.sell_order(i)
+
     def update_price(self, symbol = 'BTCUSDT'):
         r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=' + symbol)
         price = json.loads(r.text)['price']

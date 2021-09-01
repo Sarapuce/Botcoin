@@ -24,12 +24,13 @@ def main(stdscr):
 
     wallet = Wallet()
 
-    wallet.place_order('A', 30000, 50000, 35000, 0.01)
+    wallet.place_order('A', 47675, 47685, 35000, 0.01)
     wallet.place_order('V', 50000, 40000, 41000, 0.01)
 
     try:
         print_header(stdscr)
         stdscr.refresh()
+        stdscr.clrtobot()
 
         while(1):
             time.sleep(1)
@@ -37,6 +38,7 @@ def main(stdscr):
             wallet.update_price()
             wallet.update_ema()
             wallet.update_orders()
+            wallet.check_tp()
             
             print_price(stdscr, wallet.old_price, wallet.current_price)
             print_orders(stdscr, wallet.order_list)
@@ -67,6 +69,9 @@ def print_price(stdscr, old_price, current_price, symbol = 'BTCUSDT'):
 
 
 def print_orders(stdscr, order_list):
+
+    rows, cols = stdscr.getmaxyx()
+
     for i, order in enumerate(order_list):
         if order['profit'] > 0:
             c = curses.color_pair(2)
@@ -82,6 +87,11 @@ def print_orders(stdscr, order_list):
         stdscr.addstr(4*i + 1, 90, 'Current value : {:.2f}'.format(order['current_value']))
         stdscr.addstr(4*i + 2, 50, 'Profit : {:.2f}'.format(order['profit']), c)
         stdscr.addstr(4*i + 2, 70, '{:.2f}%'.format(order['percent']), c)
+
+    for i in range(4*i + 3, rows):
+        stdscr.addstr(i, 40, ' ' * (cols - 41))
+
+    
 
 def print_ema(stdscr, ema5, ema20):
     stdscr.addstr(8, 0, "EMA 5  : {:.2f}".format(ema5))
