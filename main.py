@@ -1,5 +1,6 @@
 
 from colorama import init, Fore, Back, Style
+from wallet import Wallet
 from os import system, name
 import requests
 import json
@@ -20,12 +21,11 @@ def define_color():
 def main(stdscr):
     stdscr.nodelay(1)
     define_color()
-    price = 0
-    order_list = []
-    budget = 10000
 
-    budget -= place_order(order_list, 'A', 30000, 60000, 35000, 0.01)
-    budget -= place_order(order_list, 'V', 90000, 60000, 70000, 0.01)
+    wallet = Wallet()
+
+    wallet.place_order('A', 30000, 50000, 35000, 0.01)
+    wallet.place_order('V', 50000, 40000, 41000, 0.01)
 
     try:
         print_header(stdscr)
@@ -33,11 +33,16 @@ def main(stdscr):
 
         while(1):
             time.sleep(1)
-            price = print_price(stdscr, price)
-            update_orders(order_list, price)
-            print_orders(stdscr, order_list)
-            print_ema(stdscr)
-            print_budget(stdscr, budget)
+
+            wallet.update_price()
+            wallet.update_ema()
+            wallet.update_orders()
+            
+            print_price(stdscr, wallet.old_price, wallet.current_price)
+            print_orders(stdscr, wallet.order_list)
+            print_ema(stdscr, wallet.ema5, wallet.ema20)
+            print_budget(stdscr, wallet.budget)
+
             stdscr.refresh()
             if stdscr.getch() == ord('q'):
                 break
@@ -52,15 +57,14 @@ def print_header(stdscr):
     stdscr.addstr('+--------------------------+\n', curses.color_pair(3))
 
 
-def print_price(stdscr, old_price, symbol = 'BTCUSDT'):
-    price = get_price(symbol)
+def print_price(stdscr, old_price, current_price, symbol = 'BTCUSDT'):
     stdscr.addstr(5, 0, 'Symbol : ' + symbol)
     stdscr.addstr(6, 0, 'Price  :               ')
-    if old_price > price:
-        stdscr.addstr(6, 10, str(price), curses.color_pair(1))
+    if old_price > current_price:
+        stdscr.addstr(6, 10, str(current_price), curses.color_pair(1))
     else:
-        stdscr.addstr(6, 10, str(price), curses.color_pair(2))
-    return price
+        stdscr.addstr(6, 10, str(current_price), curses.color_pair(2))
+
 
 def print_orders(stdscr, order_list):
     for i, order in enumerate(order_list):
@@ -70,71 +74,54 @@ def print_orders(stdscr, order_list):
             c = curses.color_pair(1)
 
         stdscr.addstr(4*i + 0, 40, 'Type : ' + order['type'])
-        stdscr.addstr(4*i + 0, 50, 'Start price : ' + str(order['price']))
-        stdscr.addstr(4*i + 0, 70, 'Quantity : ' + str(order['quantity']))
-        stdscr.addstr(4*i + 0, 90, 'Value : ' + str(order['value']))
-        stdscr.addstr(4*i + 1, 50, 'SL : ' + str(order['SL']))
-        stdscr.addstr(4*i + 1, 70, 'TP : ' + str(order['TP']))
-        stdscr.addstr(4*i + 1, 90, 'Current value : {}'.format(order['value']))
+        stdscr.addstr(4*i + 0, 50, 'Start price : {:.2f}'.format(order['price']))
+        stdscr.addstr(4*i + 0, 75, 'Quantity : ' + str(order['quantity']))
+        stdscr.addstr(4*i + 0, 95, 'Value : {:.2f}'.format(order['value']))
+        stdscr.addstr(4*i + 1, 50, 'SL : {:.2f}'.format(order['SL']))
+        stdscr.addstr(4*i + 1, 70, 'TP : {:.2f}'.format(order['TP']))
+        stdscr.addstr(4*i + 1, 90, 'Current value : {:.2f}'.format(order['current_value']))
         stdscr.addstr(4*i + 2, 50, 'Profit : {:.2f}'.format(order['profit']), c)
         stdscr.addstr(4*i + 2, 70, '{:.2f}%'.format(order['percent']), c)
 
-def print_ema(stdscr):
-    ema5 = get_ema(5)
-    ema20 = get_ema(20)
+def print_ema(stdscr, ema5, ema20):
     stdscr.addstr(8, 0, "EMA 5  : {:.2f}".format(ema5))
     stdscr.addstr(9, 0, "EMA 20 : {:.2f}".format(ema20))
 
 def print_budget(stdscr, budget):
     stdscr.addstr(11, 0, "Budget : {:.2f}".format(budget))
 
-# Add an order to the list. The format is not devinitive
-def place_order(order_list, type_, SL, TP, price, qty):
-    order_list.append({'type' : type_, 'price' : price, 'quantity' : qty, 'value' : qty*price, 'current_value' : qty*price, 'SL' : SL, 'TP' : TP, 'profit' : 0, 'percent' : 0})
-    budget = qty*price
-    return budget
 
-def sell_order(order_list, id_):
+# Sell an order if TP/SL are hit
+def check_tp(order_list):
     current_price = get_price()
-    update_orders(order_list, current_price)
-    order = order_list[id_]
-    order_list = order_list[:i] + order_list[i+1:]
-    budget = order['value'] + order['profit']
-    return budget
+    value = 0
+    for i, order in enumerate(order_list):
+        if order['type'] == 'A':
+            if current_price > order['TP'] or current_price < order['SL']:
+                print('Vente de A')
+                value += sell_order(order_list, i)
+        else:
+            if current_price < order['TP'] or current_price > order['SL']:
+                print(current_price)
+                print(order['TP'])
+                print(order['SL'])
+                value += sell_order(order_list, i)
 
+    return value
 
 
 # Calculate profit from each trade
 def update_orders(order_list, current_price):
     for order in order_list:
         price = order['price']
-        if order['type'] == 'A':
+        if order['type'] == 'V':
             order['profit']  = (current_price - price) * order['quantity']
             order['percent'] =  ((current_price / price) - 1) * 100
         elif order['type'] == 'V':
             order['profit']  = (price - current_price) * order['quantity']
             order['percent'] =  ((price / current_price) - 1) * 100   
 
-# Get the price of BTC thought binance API
-def get_price(symbol = 'BTCUSDT'):
-    r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=' + symbol)
-    price = json.loads(r.text)['price']
-    return float(price)
 
-# Calculate EMA from a serie and a period (for trading view)
-def calculate_ema(prices, days, smoothing=2):
-    smoothing = 2
-    ema = [sum(prices[:days]) / days]
-    for price in prices[days:]:
-        ema.append((price * (smoothing / (1 + days))) + ema[-1] * (1 - (smoothing / (1 + days))))
-    return ema
-
-# Calculate ema with closed candle from binance API
-def get_ema(period, symbol = 'BTCUSDT'):
-    url = 'https://api.binance.com/api/v3/klines?symbol='+ symbol +'&interval='+'1m'
-    data = requests.get(url).json()
-    close_prices = [float(i[4]) for i in data]
-    return calculate_ema(close_prices, period)[-2]
 
 if __name__ == '__main__':
     init_curses()
