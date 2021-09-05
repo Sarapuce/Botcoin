@@ -15,3 +15,8 @@ def extract_history(symbol, interval, start, end):
         
     df = df[df[0] >= start * 1000]
     return df
+
+def save_history(symbol, interval, start, end):
+    df = extract_history(symbol, interval, start, end)
+    path = './history/' + symbol + ' - ' + interval + ' - ' + str(start) + ' - ' + str(end)
+    df.to_csv(path)
