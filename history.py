@@ -19,4 +19,4 @@ def extract_history(symbol, interval, start, end):
 def save_history(symbol, interval, start, end):
     df = extract_history(symbol, interval, start, end)
     path = './history/' + symbol + ' - ' + interval + ' - ' + str(start) + ' - ' + str(end)
-    df.to_csv(path)
+    df.to_csv(path, index = False)
