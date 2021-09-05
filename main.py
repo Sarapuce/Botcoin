@@ -39,7 +39,7 @@ def main(stdscr):
             wallet.check_tp()
             
 
-            print_price(stdscr, wallet.old_price, wallet.current_price)
+            print_price(stdscr, wallet.old_price, wallet.current_price, wallet.time)
             print_orders(stdscr, wallet.order_list)
             print_ema(stdscr, wallet.ema5[-2], wallet.ema20[-2], wallet.trend)
             print_budget(stdscr, wallet.budget)
@@ -58,13 +58,14 @@ def print_header(stdscr):
     stdscr.addstr('+--------------------------+\n', curses.color_pair(3))
 
 
-def print_price(stdscr, old_price, current_price, symbol = 'BTCUSDT'):
+def print_price(stdscr, old_price, current_price, timestamp, symbol = 'BTCUSDT'):
     stdscr.addstr(5, 0, 'Symbol : ' + symbol)
     stdscr.addstr(6, 0, 'Price  :               ')
     if old_price > current_price:
         stdscr.addstr(6, 10, str(current_price), curses.color_pair(1))
     else:
         stdscr.addstr(6, 10, str(current_price), curses.color_pair(2))
+    stdscr.addstr(7, 0, 'Time   : ' + timestamp)
 
 
 def print_orders(stdscr, order_list):

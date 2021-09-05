@@ -66,9 +66,13 @@ class Wallet:
         if not self.order:
             self.order = True
             if self.ema5[-3] > self.ema20[-3] and self.ema5[-2] < self.ema20[-2]:
-                self.place_order('V', self.ema20[-2], self.current_price - ((self.ema20[-2] - self.current_price) * 1.5), self.current_price, 0.01)
+                SL = min(self.ema20[-2], 1.01*self.current_price)
+                TP = min(self.current_price - ((SL - self.current_price) * 1.5), self.current_price * 0.9975)
+                self.place_order('V', SL, self.current_price - ((SL - self.current_price) * 1.5), self.current_price, 0.01)
             elif self.ema5[-3] < self.ema20[-3] and self.ema5[-2] > self.ema20[-2]:
-                self.place_order('A', self.ema20[-2], self.current_price + ((self.current_price - self.ema20[-2]) * 1.5), self.current_price, 0.01)
+                SL = max(self.ema20[-2], 0.99*self.current_price)
+                TP = max(self.current_price + ((self.current_price - SL) * 1.5), 1.0025*self.current_price)
+                self.place_order('A', SL, TP, self.current_price, 0.01)
 
     def check_new_candle(self, symbol = 'BTCUSDT'):
         url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
