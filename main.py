@@ -33,16 +33,18 @@ def main(stdscr):
         while(1):
             time.sleep(1)
 
+            wallet.load_simulation_file('./history/BTCUSDT - 5m - 1597177600 - 1599264000')
             wallet.update_price()
             wallet.update_orders()
             wallet.check_new_candle()
             wallet.check_tp()
             
 
-            print_price(stdscr, wallet.old_price, wallet.current_price, wallet.time)
+            print_price(stdscr, wallet.old_price, wallet.current_price)
             print_orders(stdscr, wallet.order_list)
             print_ema(stdscr, wallet.ema5[-2], wallet.ema20[-2], wallet.trend)
             print_budget(stdscr, wallet.budget)
+            print_datetime(stdscr, wallet.get_date())
 
             stdscr.refresh()
             if stdscr.getch() == ord('q'):
@@ -58,14 +60,13 @@ def print_header(stdscr):
     stdscr.addstr('+--------------------------+\n', curses.color_pair(3))
 
 
-def print_price(stdscr, old_price, current_price, timestamp, symbol = 'BTCUSDT'):
+def print_price(stdscr, old_price, current_price, symbol = 'BTCUSDT'):
     stdscr.addstr(5, 0, 'Symbol : ' + symbol)
     stdscr.addstr(6, 0, 'Price  :               ')
     if old_price > current_price:
         stdscr.addstr(6, 10, str(current_price), curses.color_pair(1))
     else:
         stdscr.addstr(6, 10, str(current_price), curses.color_pair(2))
-    stdscr.addstr(7, 0, 'Time   : ' + timestamp)
 
 
 def print_orders(stdscr, order_list):
@@ -105,6 +106,9 @@ def print_ema(stdscr, ema5, ema20, trend):
 
 def print_budget(stdscr, budget):
     stdscr.addstr(11, 0, "Budget : {:.2f}".format(budget))
+
+def print_datetime(stdsrc, date):
+    stdsrc.addstr(7, 0, date)
 
 if __name__ == '__main__':
     init_curses()

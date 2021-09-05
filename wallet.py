@@ -1,5 +1,7 @@
 import requests
 import json
+import pandas as pd
+from datetime import datetime
 
 class Wallet:
     
@@ -14,7 +16,16 @@ class Wallet:
         self.candle_id     = 0
         self.trend         = ''
         self.time          = '1m'
+        self.simulation    = False
+        self.file          = ''
+        self.df            = pd.DataFrame()
+        self.simulation_index = 0
+        self.simu_candle_index = 0
 
+    def load_simulation_file(self, path):
+        self.file = path
+        self.simulation = True
+        self.df = pd.read_csv(self.file)
 
     def place_order(self, type_, SL, TP, price, qty):
         print(type_, SL, TP, price, qty)
@@ -49,10 +60,20 @@ class Wallet:
                     self.sell_order(i)
 
     def update_price(self, symbol = 'BTCUSDT'):
-        r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=' + symbol)
-        price = json.loads(r.text)['price']
-        self.old_price = self.current_price
-        self.current_price = float(price)
+        if not self.simulation:
+            r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=' + symbol)
+            price = json.loads(r.text)['price']
+            self.old_price = self.current_price
+            self.current_price = float(price)
+        else:
+            self.current_price = float(self.df[str(self.simu_candle_index + 1)][self.simulation_index])
+            self.simu_candle_index = (self.simu_candle_index + 1) % 4
+            if self.simu_candle_index == 0:
+                self.simulation_index += 1
+
+    def get_date(self):
+        return datetime.fromtimestamp(self.df['0'][self.simulation_index] // 1000).strftime('%Y-%m-%d %H:%M:%S')
+
 
     def update_ema(self):
         self.ema5  = self.get_ema(21)
