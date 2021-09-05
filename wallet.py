@@ -10,8 +10,8 @@ class Wallet:
         self.order_list    = []
         self.current_price = 0
         self.old_price     = 0
-        self.ema5          = 0
-        self.ema20         = 0
+        self.ema5          = [0, 0, 0]
+        self.ema20         = [0, 0, 0]
         self.order         = True
         self.candle_id     = 0
         self.trend         = ''
@@ -96,19 +96,32 @@ class Wallet:
                 self.place_order('A', SL, TP, self.current_price, 0.01)
 
     def check_new_candle(self, symbol = 'BTCUSDT'):
-        url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
-        data = requests.get(url).json()
-        if self.candle_id != data[0][0]:
-            self.candle_id = data[0][0]
-            self.order = False
-            self.update_ema()
-            self.check_cross()
+        if not self.simulation:
+            url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
+            data = requests.get(url).json()
+            if self.candle_id != data[0][0]:
+                self.candle_id = data[0][0]
+                self.order = False
+                self.update_ema()
+                self.check_cross()
+        else:
+            if self.simu_candle_index == 0:
+                self.order = False
+                self.update_ema()
+                self.check_cross()
 
     def get_ema(self, period, symbol = 'BTCUSDT'):
-        url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
-        data = requests.get(url).json()
-        close_prices = [float(i[4]) for i in data]
-        return calculate_ema(close_prices, period)
+        if not self.simulation:
+            url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
+            data = requests.get(url).json()
+            close_prices = [float(i[4]) for i in data]
+            return calculate_ema(close_prices, period)
+        else:
+            if self.simulation_index < period + 5:
+                self.order = True
+                return [0, 0, 0]
+            start_index = max(self.simulation_index - 500, 0)
+            return calculate_ema(self.df['4'][start_index:self.simulation_index], period)
 
 def calculate_ema(prices, days, smoothing=2):
     smoothing = 2

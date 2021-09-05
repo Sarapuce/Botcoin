@@ -31,7 +31,7 @@ def main(stdscr):
         stdscr.clrtobot()
 
         while(1):
-            time.sleep(1)
+            time.sleep(0.1)
 
             wallet.load_simulation_file('./history/BTCUSDT - 5m - 1597177600 - 1599264000')
             wallet.update_price()
@@ -41,10 +41,11 @@ def main(stdscr):
             
 
             print_price(stdscr, wallet.old_price, wallet.current_price)
+            print_datetime(stdscr, wallet.get_date())
             print_orders(stdscr, wallet.order_list)
             print_ema(stdscr, wallet.ema5[-2], wallet.ema20[-2], wallet.trend)
             print_budget(stdscr, wallet.budget)
-            print_datetime(stdscr, wallet.get_date())
+            
 
             stdscr.refresh()
             if stdscr.getch() == ord('q'):
