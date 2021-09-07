@@ -2,6 +2,7 @@ import requests
 import json
 import pandas as pd
 from datetime import datetime
+from colorama import init, Fore, Back, Style
 
 class Wallet:
     
@@ -22,6 +23,8 @@ class Wallet:
         self.simulation_index = 0
         self.simu_candle_index = 0
         self.end           = False
+        self.nb_of_trades  = 0
+        init()
 
     def load_simulation_file(self, path):
         self.file = path
@@ -32,13 +35,21 @@ class Wallet:
         self.simulation_index = 500
 
     def place_order(self, type_, SL, TP, price, qty):
-        print(type_, SL, TP, price, qty)
+        print(Fore.CYAN + "Order placed :", type_, SL, TP, price, qty, Style.RESET_ALL)
         self.order_list.append({'type' : type_, 'price' : price, 'quantity' : qty, 'value' : qty*price, 'current_value' : qty*price, 'SL' : SL, 'TP' : TP, 'profit' : 0, 'percent' : 0})
         self.budget -= qty*price
+        self.nb_of_trades += 1
 
     def sell_order(self, id_):
         self.update_orders()
         order = self.order_list[id_]
+        
+        if (order['type'] == 'A' and self.current_price >= order['TP']) or order['type'] == 'V' and self.current_price <= order['TP']:
+            result = Fore.GREEN + 'Won'
+        else:
+            result = Fore.RED + 'Lost'
+
+        print(result, order['type'], order['SL'], order['TP'], order['price'], order['quantity'], Style.RESET_ALL)
         self.order_list = self.order_list[:id_] + self.order_list[id_+1:]
         self.budget += order['value'] + order['profit']
 

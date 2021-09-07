@@ -56,6 +56,9 @@ def main(stdscr):
     except KeyboardInterrupt:
         curses.endwin()
 
+    print("Number of trades : {}".format(wallet.nb_of_trades))
+    print("Final budget : {:.2f}$".format(wallet.budget))
+
 # Graphical functions
 def print_header(stdscr):
     stdscr.addstr('+--------------------------+\n', curses.color_pair(3))
