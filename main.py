@@ -30,14 +30,16 @@ def main(stdscr):
         stdscr.refresh()
         stdscr.clrtobot()
 
-        while(1):
-            time.sleep(0.1)
+        wallet.load_simulation_file('./history/BTCUSDT - 5m - 1629331201 - 1629935999')
 
-            wallet.load_simulation_file('./history/BTCUSDT - 5m - 1597177600 - 1599264000')
+        while(not wallet.end):
+            # time.sleep(0.1)
+
             wallet.update_price()
             wallet.update_orders()
             wallet.check_new_candle()
             wallet.check_tp()
+            wallet.check_end()
             
 
             print_price(stdscr, wallet.old_price, wallet.current_price)

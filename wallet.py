@@ -15,17 +15,21 @@ class Wallet:
         self.order         = True
         self.candle_id     = 0
         self.trend         = ''
-        self.time          = '1m'
+        self.time          = '5m'
         self.simulation    = False
         self.file          = ''
         self.df            = pd.DataFrame()
         self.simulation_index = 0
         self.simu_candle_index = 0
+        self.end           = False
 
     def load_simulation_file(self, path):
         self.file = path
         self.simulation = True
         self.df = pd.read_csv(self.file)
+        if len(self.df) < 500:
+            print('Simulation file too small')
+        self.simulation_index = 500
 
     def place_order(self, type_, SL, TP, price, qty):
         print(type_, SL, TP, price, qty)
@@ -72,7 +76,10 @@ class Wallet:
                 self.simulation_index += 1
 
     def get_date(self):
-        return datetime.fromtimestamp(self.df['0'][self.simulation_index] // 1000).strftime('%Y-%m-%d %H:%M:%S')
+        if not self.simulation:
+            return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            return datetime.fromtimestamp(self.df['0'][self.simulation_index] // 1000).strftime('%Y-%m-%d %H:%M:%S')
 
 
     def update_ema(self):
@@ -121,7 +128,11 @@ class Wallet:
                 self.order = True
                 return [0, 0, 0]
             start_index = max(self.simulation_index - 500, 0)
-            return calculate_ema(self.df['4'][start_index:self.simulation_index], period)
+            return calculate_ema(self.df['4'][start_index + 1:self.simulation_index + 1], period)
+    
+    def check_end(self):
+        if self.simulation_index >= len(self.df) - 1:
+            self.end = True
 
 def calculate_ema(prices, days, smoothing=2):
     smoothing = 2
