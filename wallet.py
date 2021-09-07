@@ -6,7 +6,7 @@ from colorama import init, Fore, Back, Style
 
 class Wallet:
     
-    def __init__(self):
+    def __init__(self, symbol = 'BTCUSDT'):
         self.budget        = 10000
         self.order_list    = []
         self.current_price = 0
@@ -24,6 +24,8 @@ class Wallet:
         self.simu_candle_index = 0
         self.end           = False
         self.nb_of_trades  = 0
+        self.ratio         = 1.5
+        self.symbol        = symbol
         init()
 
     def load_simulation_file(self, path):
@@ -70,13 +72,18 @@ class Wallet:
             if order['type'] == 'A':
                 if self.current_price > order['TP'] or self.current_price < order['SL']:
                     self.sell_order(i)
+                    return self.check_tp()
             else:
                 if self.current_price < order['TP'] or self.current_price > order['SL']:
                     self.sell_order(i)
+                    return self.check_tp()
 
-    def update_price(self, symbol = 'BTCUSDT'):
+    def update_tp(self):
+        return None
+
+    def update_price(self):
         if not self.simulation:
-            r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=' + symbol)
+            r = requests.get('https://api.binance.com/api/v3/ticker/price?symbol=' + self.symbol)
             price = json.loads(r.text)['price']
             self.old_price = self.current_price
             self.current_price = float(price)
@@ -106,16 +113,16 @@ class Wallet:
             self.order = True
             if self.ema5[-3] > self.ema20[-3] and self.ema5[-2] < self.ema20[-2]:
                 SL = min(self.ema20[-2], 1.01*self.current_price)
-                TP = min(self.current_price - ((SL - self.current_price) * 1.5), self.current_price * 0.9975)
-                self.place_order('V', SL, self.current_price - ((SL - self.current_price) * 1.5), self.current_price, 0.01)
+                TP = self.current_price - ((SL - self.current_price) * self.ratio)
+                self.place_order('V', SL, TP, self.current_price, (0.1*self.budget) / self.current_price)
             elif self.ema5[-3] < self.ema20[-3] and self.ema5[-2] > self.ema20[-2]:
                 SL = max(self.ema20[-2], 0.99*self.current_price)
-                TP = max(self.current_price + ((self.current_price - SL) * 1.5), 1.0025*self.current_price)
-                self.place_order('A', SL, TP, self.current_price, 0.01)
+                TP = self.current_price + ((self.current_price - SL) * self.ratio)
+                self.place_order('A', SL, TP, self.current_price, (0.1*self.budget) / self.current_price)
 
-    def check_new_candle(self, symbol = 'BTCUSDT'):
+    def check_new_candle(self):
         if not self.simulation:
-            url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
+            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
             data = requests.get(url).json()
             if self.candle_id != data[0][0]:
                 self.candle_id = data[0][0]
@@ -128,9 +135,9 @@ class Wallet:
                 self.update_ema()
                 self.check_cross()
 
-    def get_ema(self, period, symbol = 'BTCUSDT'):
+    def get_ema(self, period):
         if not self.simulation:
-            url = 'https://api.binance.com/api/v3/klines?symbol=' + symbol + '&interval=' + self.time
+            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
             data = requests.get(url).json()
             close_prices = [float(i[4]) for i in data]
             return calculate_ema(close_prices, period)

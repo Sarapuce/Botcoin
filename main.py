@@ -1,5 +1,4 @@
 
-from colorama import init, Fore, Back, Style
 from wallet import Wallet
 from os import system, name
 import requests
@@ -30,7 +29,7 @@ def main(stdscr):
         stdscr.refresh()
         stdscr.clrtobot()
 
-        wallet.load_simulation_file('./history/BTCUSDT - 5m - 1629331201 - 1629935999')
+        wallet.load_simulation_file('./history/BTCUSDT - 5m - 1617235200 - 1619827200')
 
         while(not wallet.end):
             # time.sleep(0.1)
@@ -42,7 +41,7 @@ def main(stdscr):
             wallet.check_end()
             
 
-            print_price(stdscr, wallet.old_price, wallet.current_price)
+            print_price(stdscr, wallet.old_price, wallet.current_price, wallet.symbol)
             print_datetime(stdscr, wallet.get_date())
             print_orders(stdscr, wallet.order_list)
             print_ema(stdscr, wallet.ema5[-2], wallet.ema20[-2], wallet.trend)
@@ -66,7 +65,7 @@ def print_header(stdscr):
     stdscr.addstr('+--------------------------+\n', curses.color_pair(3))
 
 
-def print_price(stdscr, old_price, current_price, symbol = 'BTCUSDT'):
+def print_price(stdscr, old_price, current_price, symbol):
     stdscr.addstr(5, 0, 'Symbol : ' + symbol)
     stdscr.addstr(6, 0, 'Price  :               ')
     if old_price > current_price:
@@ -90,7 +89,7 @@ def print_orders(stdscr, order_list):
 
         stdscr.addstr(4*i + 0, 40, 'Type : ' + order['type'])
         stdscr.addstr(4*i + 0, 50, 'Start price : {:.2f}'.format(order['price']))
-        stdscr.addstr(4*i + 0, 75, 'Quantity : ' + str(order['quantity']))
+        stdscr.addstr(4*i + 0, 75, 'Quantity : {:.5f}'.format(order['quantity']))
         stdscr.addstr(4*i + 0, 95, 'Value : {:.2f}'.format(order['value']))
         stdscr.addstr(4*i + 1, 50, 'SL : {:.2f}'.format(order['SL']))
         stdscr.addstr(4*i + 1, 70, 'TP : {:.2f}'.format(order['TP']))
