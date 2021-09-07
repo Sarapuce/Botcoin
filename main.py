@@ -1,9 +1,4 @@
-
 from wallet import Wallet
-from os import system, name
-import requests
-import json
-import time
 import curses
 
 # Use of the wrapper function to get thing easier
