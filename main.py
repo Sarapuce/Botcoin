@@ -24,7 +24,7 @@ def main(stdscr):
         stdscr.refresh()
         stdscr.clrtobot()
 
-        wallet.load_simulation_file('./history/BTCUSDT - 5m - 1617235200 - 1619827200')
+        wallet.load_simulation_file('./history/ETHUSDT - 5m - 1617235200 - 1619827200')
 
         while(not wallet.end):
             # time.sleep(0.1)
@@ -39,7 +39,7 @@ def main(stdscr):
             print_price(stdscr, wallet.old_price, wallet.current_price, wallet.symbol)
             print_datetime(stdscr, wallet.get_date())
             print_orders(stdscr, wallet.order_list)
-            print_ema(stdscr, wallet.ema5[-2], wallet.ema20[-2], wallet.trend)
+            print_ema(stdscr, wallet.ema_quick[-2], wallet.ema_slow[-2], wallet.trend)
             print_budget(stdscr, wallet.budget)
             
 
@@ -96,9 +96,9 @@ def print_orders(stdscr, order_list):
 
     
 
-def print_ema(stdscr, ema5, ema20, trend):
-    stdscr.addstr(8, 0, "EMA 21 : {:.2f}".format(ema5))
-    stdscr.addstr(9, 0, "EMA 55 : {:.2f}".format(ema20))
+def print_ema(stdscr, ema_quick, ema_slow, trend):
+    stdscr.addstr(8, 0, "EMA 21 : {:.2f}".format(ema_quick))
+    stdscr.addstr(9, 0, "EMA 55 : {:.2f}".format(ema_slow))
     if trend == 'up':
         stdscr.addstr(8, 20, "↑", curses.color_pair(2))
     else:

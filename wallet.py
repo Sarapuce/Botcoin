@@ -11,8 +11,8 @@ class Wallet:
         self.order_list    = []
         self.current_price = 0
         self.old_price     = 0
-        self.ema5          = [0, 0, 0]
-        self.ema20         = [0, 0, 0]
+        self.ema_quick          = [0, 0, 0]
+        self.ema_slow         = [0, 0, 0]
         self.order         = True
         self.candle_id     = 0
         self.trend         = ''
@@ -101,9 +101,9 @@ class Wallet:
 
 
     def update_ema(self):
-        self.ema5  = self.get_ema(21)
-        self.ema20 = self.get_ema(55)
-        if self.ema5[-2] > self.ema20[-2]:
+        self.ema_quick  = self.get_ema(21)
+        self.ema_slow = self.get_ema(55)
+        if self.ema_quick[-2] > self.ema_slow[-2]:
             self.trend = 'up'
         else:
             self.trend = 'down'
@@ -111,12 +111,12 @@ class Wallet:
     def check_cross(self):
         if not self.order:
             self.order = True
-            if self.ema5[-3] > self.ema20[-3] and self.ema5[-2] < self.ema20[-2]:
-                SL = min(self.ema20[-2], 1.01*self.current_price)
+            if self.ema_quick[-3] > self.ema_slow[-3] and self.ema_quick[-2] < self.ema_slow[-2]:
+                SL = min(self.ema_slow[-2], 1.01*self.current_price)
                 TP = self.current_price - ((SL - self.current_price) * self.ratio)
                 self.place_order('V', SL, TP, self.current_price, (0.1*self.budget) / self.current_price)
-            elif self.ema5[-3] < self.ema20[-3] and self.ema5[-2] > self.ema20[-2]:
-                SL = max(self.ema20[-2], 0.99*self.current_price)
+            elif self.ema_quick[-3] < self.ema_slow[-3] and self.ema_quick[-2] > self.ema_slow[-2]:
+                SL = max(self.ema_slow[-2], 0.99*self.current_price)
                 TP = self.current_price + ((self.current_price - SL) * self.ratio)
                 self.place_order('A', SL, TP, self.current_price, (0.1*self.budget) / self.current_price)
 
@@ -151,6 +151,11 @@ class Wallet:
     def check_end(self):
         if self.simulation_index >= len(self.df) - 1:
             self.end = True
+            self.close_all_order()
+
+    def close_all_order(self):
+        while self.order_list:
+            self.sell_order(0)
 
 def calculate_ema(prices, days, smoothing=2):
     smoothing = 2
