@@ -1,5 +1,6 @@
 from wallet import Wallet
 import curses
+import time
 
 # Use of the wrapper function to get thing easier
 def init_curses():
@@ -24,10 +25,10 @@ def main(stdscr):
         stdscr.refresh()
         stdscr.clrtobot()
 
-        wallet.load_simulation_file('./history/ETHUSDT - 5m - 1617235200 - 1619827200')
+        # wallet.load_simulation_file('./history/BTCUSDT - 5m - 1630454400 - 1630972800')
 
-        while(not wallet.end):
-            # time.sleep(0.1)
+        while(1):
+            time.sleep(1)
 
             wallet.update_price()
             wallet.update_orders()
@@ -39,7 +40,7 @@ def main(stdscr):
             print_price(stdscr, wallet.old_price, wallet.current_price, wallet.symbol)
             print_datetime(stdscr, wallet.get_date())
             print_orders(stdscr, wallet.order_list)
-            print_ema(stdscr, wallet.ema_quick[-2], wallet.ema_slow[-2], wallet.trend)
+            print_ema(stdscr, wallet.ema_quick[-2], wallet.ema_slow[-2], wallet.ema_quick[-3], wallet.ema_slow[-3])
             print_budget(stdscr, wallet.budget)
             
 
@@ -51,6 +52,7 @@ def main(stdscr):
         curses.endwin()
 
     print("Number of trades : {}".format(wallet.nb_of_trades))
+    print("Won : {}, Lost : {}".format(wallet.win_trades, wallet.nb_of_trades - wallet.win_trades))
     print("Final budget : {:.2f}$".format(wallet.budget))
 
 # Graphical functions
@@ -96,13 +98,24 @@ def print_orders(stdscr, order_list):
 
     
 
-def print_ema(stdscr, ema_quick, ema_slow, trend):
-    stdscr.addstr(8, 0, "EMA 21 : {:.2f}".format(ema_quick))
-    stdscr.addstr(9, 0, "EMA 55 : {:.2f}".format(ema_slow))
-    if trend == 'up':
-        stdscr.addstr(8, 20, "↑", curses.color_pair(2))
+def print_ema(stdscr, ema_quick, ema_slow, ema_quick_old, ema_slow_old):
+    trend = 0
+    if ema_quick > ema_quick_old:
+        stdscr.addstr(8, 0, "EMA 21 : {:.2f} ↑".format(ema_quick), curses.color_pair(2))
+        trend += 1
     else:
-        stdscr.addstr(8, 20, "↓", curses.color_pair(1))
+        stdscr.addstr(8, 0, "EMA 21 : {:.2f} ↓".format(ema_quick), curses.color_pair(1))
+
+    if ema_slow > ema_slow_old:
+        stdscr.addstr(9, 0, "EMA 55 : {:.2f} ↑".format(ema_slow), curses.color_pair(2))
+        trend += 1
+    else:
+        stdscr.addstr(9, 0, "EMA 55 : {:.2f} ↓".format(ema_slow), curses.color_pair(1))
+    
+    if ema_quick > ema_slow:
+        stdscr.addstr(8, 22, "↑", curses.color_pair(2))
+    else:
+        stdscr.addstr(8, 22, "↓", curses.color_pair(1))
 
 def print_budget(stdscr, budget):
     stdscr.addstr(11, 0, "Budget : {:.2f}".format(budget))

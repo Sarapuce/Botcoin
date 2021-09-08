@@ -1,6 +1,7 @@
 import requests
 import json
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from colorama import init, Fore, Back, Style
 
@@ -11,8 +12,10 @@ class Wallet:
         self.order_list    = []
         self.current_price = 0
         self.old_price     = 0
-        self.ema_quick          = [0, 0, 0]
-        self.ema_slow         = [0, 0, 0]
+        self.ema_quick     = [0, 0, 0]
+        self.ema_slow      = [0, 0, 0]
+        self.ma_quick      = [0, 0, 0]
+        self.ma_slow       = [0, 0, 0]
         self.order         = True
         self.candle_id     = 0
         self.trend         = ''
@@ -24,8 +27,9 @@ class Wallet:
         self.simu_candle_index = 0
         self.end           = False
         self.nb_of_trades  = 0
-        self.ratio         = 1.5
+        self.ratio         = 6/5
         self.symbol        = symbol
+        self.win_trades    = 0
         init()
 
     def load_simulation_file(self, path):
@@ -48,6 +52,7 @@ class Wallet:
         
         if (order['type'] == 'A' and self.current_price >= order['TP']) or order['type'] == 'V' and self.current_price <= order['TP']:
             result = Fore.GREEN + 'Won'
+            self.win_trades += 1
         else:
             result = Fore.RED + 'Lost'
 
@@ -78,8 +83,6 @@ class Wallet:
                     self.sell_order(i)
                     return self.check_tp()
 
-    def update_tp(self):
-        return None
 
     def update_price(self):
         if not self.simulation:
@@ -101,12 +104,16 @@ class Wallet:
 
 
     def update_ema(self):
-        self.ema_quick  = self.get_ema(21)
-        self.ema_slow = self.get_ema(55)
+        self.ema_quick = self.get_ema(21)
+        self.ema_slow  = self.get_ema(55)
         if self.ema_quick[-2] > self.ema_slow[-2]:
             self.trend = 'up'
         else:
             self.trend = 'down'
+
+    def update_ma(self):
+        self.ma_quick = self.get_ma(21)
+        self.ma_slow  = self.get_ma(55)
 
     def check_cross(self):
         if not self.order:
@@ -120,6 +127,8 @@ class Wallet:
                 TP = self.current_price + ((self.current_price - SL) * self.ratio)
                 self.place_order('A', SL, TP, self.current_price, (0.1*self.budget) / self.current_price)
 
+    
+
     def check_new_candle(self):
         if not self.simulation:
             url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
@@ -128,11 +137,13 @@ class Wallet:
                 self.candle_id = data[0][0]
                 self.order = False
                 self.update_ema()
+                self.update_ma()
                 self.check_cross()
         else:
             if self.simu_candle_index == 0:
                 self.order = False
                 self.update_ema()
+                self.update_ma()
                 self.check_cross()
 
     def get_ema(self, period):
@@ -147,6 +158,20 @@ class Wallet:
                 return [0, 0, 0]
             start_index = max(self.simulation_index - 500, 0)
             return calculate_ema(self.df['4'][start_index + 1:self.simulation_index + 1], period)
+
+    def get_ma(self, period):
+        if not self.simulation:
+            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
+            data = requests.get(url).json()
+            close_prices = [float(i[4]) for i in data]
+            return calculate_ma(close_prices, period)
+        else:
+            print('cc')
+            if self.simulation_index < period + 5:
+                self.order = True
+                return [0, 0, 0]
+            start_index = max(self.simulation_index - 500, 0)
+            return calculate_ma(self.df['4'][start_index + 1:self.simulation_index + 1], period)
     
     def check_end(self):
         if self.simulation_index >= len(self.df) - 1:
@@ -156,6 +181,14 @@ class Wallet:
     def close_all_order(self):
         while self.order_list:
             self.sell_order(0)
+
+def calculate_ma(data, smaPeriod):
+    j = next(i for i, x in enumerate(data) if x is not None)
+    our_range = range(len(data))[j + smaPeriod - 1:]
+    empty_list = [None] * (j + smaPeriod - 1)
+    sub_result = [np.mean(data[i - smaPeriod + 1: i + 1]) for i in our_range]
+
+    return np.array(empty_list + sub_result)
 
 def calculate_ema(prices, days, smoothing=2):
     smoothing = 2
