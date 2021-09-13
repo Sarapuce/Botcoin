@@ -38,7 +38,8 @@ class Wallet:
         self.simulation = True
         self.df = pd.read_csv(self.file)
         if len(self.df) < 500:
-            print('Simulation file too small')
+            print('[-] Error : Simulation file too small')
+            exit(1)
         self.simulation_index = 500
 
     def place_order(self, type_, SL, TP, price, qty):
@@ -167,7 +168,6 @@ class Wallet:
             close_prices = [float(i[4]) for i in data]
             return calculate_ma(close_prices, period)
         else:
-            print('cc')
             if self.simulation_index < period + 5:
                 self.order = True
                 return [0, 0, 0]
@@ -175,9 +175,10 @@ class Wallet:
             return calculate_ma(self.df['4'][start_index + 1:self.simulation_index + 1], period)
     
     def check_end(self):
-        if self.simulation_index >= len(self.df) - 1:
-            self.end = True
-            self.close_all_order()
+        if self.simulation:
+            if self.simulation_index >= len(self.df) - 1:
+                self.end = True
+                self.close_all_order()
 
     def close_all_order(self):
         while self.order_list:
@@ -202,11 +203,11 @@ class Wallet:
         tr3 = pd.DataFrame(abs(lows[1:] - closes[:-1]))
         frames = [tr1, tr2, tr3]
         tr = pd.concat(frames, axis = 1, join = 'inner').max(axis = 1)
-        atr = tr.ewm(10).mean()
+        atr = tr.ewm(length).mean()
         atr = np.array(atr)
         hla = np.array((highs[1:] + lows[1:]) / 2)
-        basic_upper_band = (hla + (3 * atr))
-        basic_lower_band = (hla - (3 * atr))
+        basic_upper_band = (hla + (factor * atr))
+        basic_lower_band = (hla - (factor * atr))
         final_upper_band = [0]
         for i in range(1, len(basic_upper_band)):
             if basic_upper_band[i] < final_upper_band[i-1] or closes[i-1] > final_upper_band[i-1]:

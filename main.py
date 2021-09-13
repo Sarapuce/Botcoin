@@ -14,7 +14,7 @@ def define_color():
 
 # main function each second it will update the interface
 def main(stdscr):
-    stdscr.nodelay(1)
+    # stdscr.nodelay(1)
     define_color()
 
     wallet = Wallet()
@@ -25,24 +25,27 @@ def main(stdscr):
         stdscr.refresh()
         stdscr.clrtobot()
 
-        # wallet.load_simulation_file('./history/BTCUSDT - 5m - 1630454400 - 1630972800')
+        wallet.load_simulation_file('./history/BTCUSDT - 5m - 1631404800 - 1631566800')
 
-        while(1):
-            time.sleep(1)
+        while(not wallet.end):
+            # time.sleep(1)
 
             wallet.update_price()
             wallet.update_orders()
             wallet.check_new_candle()
             wallet.check_tp()
             wallet.check_end()
+            wallet.update_supertrend(10, 3)
             
 
             print_price(stdscr, wallet.old_price, wallet.current_price, wallet.symbol)
             print_datetime(stdscr, wallet.get_date())
             print_orders(stdscr, wallet.order_list)
             print_ema(stdscr, wallet.ma_quick[-2], wallet.ma_slow[-2], wallet.ma_quick[-3], wallet.ma_slow[-3])
+            print_supertrend(stdscr, wallet.supertrend, wallet.simulation_index)
+            print_simulation(stdscr, wallet.simulation_index, len(wallet.df), wallet.simulation)
             print_budget(stdscr, wallet.budget)
-            
+
 
             stdscr.refresh()
             if stdscr.getch() == ord('q'):
@@ -122,6 +125,17 @@ def print_budget(stdscr, budget):
 
 def print_datetime(stdsrc, date):
     stdsrc.addstr(7, 0, date)
+
+def print_supertrend(stdsrc, supertrend, i = -1):
+    if i >= len(supertrend):
+        return
+    stdsrc.addstr(7, 30, "{:.2f}".format(supertrend[i]))
+    stdsrc.addstr(8, 30, "{:.2f}".format(i))
+
+def print_simulation(stdsrc, i, simu_length, simulation):
+    if simulation:
+        stdsrc.addstr(4, 0, "Simulation : {}/{}".format(i, simu_length))
+
 
 if __name__ == '__main__':
     init_curses()
