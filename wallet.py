@@ -31,6 +31,7 @@ class Wallet:
         self.symbol        = symbol
         self.win_trades    = 0
         self.supertrend    = [0, 0, 0, 0, 0]
+        self.data          = []
         init()
 
     def load_simulation_file(self, path):
@@ -134,25 +135,24 @@ class Wallet:
     def check_new_candle(self):
         if not self.simulation:
             url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
-            data = requests.get(url).json()
-            if self.candle_id != data[0][0]:
-                self.candle_id = data[0][0]
+            self.data = requests.get(url).json()
+            if self.candle_id != self.data[0][0]:
+                self.candle_id = self.data[0][0]
                 self.order = False
                 self.update_ema()
                 self.update_ma()
-                self.check_cross()
+                self.update_supertrend(3, 10)
+                self.check_strat()
         else:
             if self.simu_candle_index == 0:
                 self.order = False
                 self.update_ema()
                 self.update_ma()
-                self.check_cross()
+                self.check_start()
 
     def get_ema(self, period):
         if not self.simulation:
-            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
-            data = requests.get(url).json()
-            close_prices = [float(i[4]) for i in data]
+            close_prices = [float(i[4]) for i in self.data]
             return calculate_ema(close_prices, period)
         else:
             if self.simulation_index < period + 5:
@@ -163,9 +163,7 @@ class Wallet:
 
     def get_ma(self, period):
         if not self.simulation:
-            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
-            data = requests.get(url).json()
-            close_prices = [float(i[4]) for i in data]
+            close_prices = [float(i[4]) for i in self.data]
             return calculate_ma(close_prices, period)
         else:
             if self.simulation_index < period + 5:
@@ -186,12 +184,10 @@ class Wallet:
 
     def update_supertrend(self, length, factor):
         if not self.simulation:
-            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
-            data = requests.get(url).json()
-            opens  = np.array([float(i[1]) for i in data])
-            highs  = np.array([float(i[2]) for i in data])
-            lows   = np.array([float(i[3]) for i in data])
-            closes = np.array([float(i[4]) for i in data])
+            opens  = np.array([float(i[1]) for i in self.data])
+            highs  = np.array([float(i[2]) for i in self.data])
+            lows   = np.array([float(i[3]) for i in self.data])
+            closes = np.array([float(i[4]) for i in self.data])
         else:
             opens  = self.df['1']
             highs  = self.df['2']
