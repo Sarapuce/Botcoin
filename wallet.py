@@ -23,7 +23,7 @@ class Wallet:
         self.simulation    = False
         self.file          = ''
         self.df            = pd.DataFrame()
-        self.simulation_index = 0
+        self.simulation_index = -1
         self.simu_candle_index = 0
         self.end           = False
         self.nb_of_trades  = 0
@@ -142,13 +142,13 @@ class Wallet:
                 self.update_ema()
                 self.update_ma()
                 self.update_supertrend(3, 10)
-                self.check_strat()
+                self.check_cross()
         else:
             if self.simu_candle_index == 0:
                 self.order = False
                 self.update_ema()
                 self.update_ma()
-                self.check_start()
+                self.check_cross()
 
     def get_ema(self, period):
         if not self.simulation:
