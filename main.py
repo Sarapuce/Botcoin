@@ -40,7 +40,7 @@ def main(stdscr):
             print_price(stdscr, wallet.old_price, wallet.current_price, wallet.symbol)
             print_datetime(stdscr, wallet.get_date())
             print_orders(stdscr, wallet.order_list)
-            print_ema(stdscr, wallet.ema_quick[-2], wallet.ema_slow[-2], wallet.ema_quick[-3], wallet.ema_slow[-3])
+            print_ema(stdscr, wallet.ma_quick[-2], wallet.ma_slow[-2], wallet.ma_quick[-3], wallet.ma_slow[-3])
             print_budget(stdscr, wallet.budget)
             
 

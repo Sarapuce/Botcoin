@@ -30,6 +30,7 @@ class Wallet:
         self.ratio         = 6/5
         self.symbol        = symbol
         self.win_trades    = 0
+        self.supertrend    = [0, 0, 0, 0, 0]
         init()
 
     def load_simulation_file(self, path):
@@ -181,6 +182,54 @@ class Wallet:
     def close_all_order(self):
         while self.order_list:
             self.sell_order(0)
+
+    def update_supertrend(self, length, factor):
+        if not self.simulation:
+            url = 'https://api.binance.com/api/v3/klines?symbol=' + self.symbol + '&interval=' + self.time
+            data = requests.get(url).json()
+            opens  = np.array([float(i[1]) for i in data])
+            highs  = np.array([float(i[2]) for i in data])
+            lows   = np.array([float(i[3]) for i in data])
+            closes = np.array([float(i[4]) for i in data])
+        else:
+            opens  = self.df['1']
+            highs  = self.df['2']
+            lows   = self.df['3']
+            closes = self.df['4']
+
+        tr1 = pd.DataFrame(highs[1:] - lows[1:])
+        tr2 = pd.DataFrame(abs(highs[1:] - closes[:-1]))
+        tr3 = pd.DataFrame(abs(lows[1:] - closes[:-1]))
+        frames = [tr1, tr2, tr3]
+        tr = pd.concat(frames, axis = 1, join = 'inner').max(axis = 1)
+        atr = tr.ewm(10).mean()
+        atr = np.array(atr)
+        hla = np.array((highs[1:] + lows[1:]) / 2)
+        basic_upper_band = (hla + (3 * atr))
+        basic_lower_band = (hla - (3 * atr))
+        final_upper_band = [0]
+        for i in range(1, len(basic_upper_band)):
+            if basic_upper_band[i] < final_upper_band[i-1] or closes[i-1] > final_upper_band[i-1]:
+                final_upper_band.append(basic_upper_band[i])
+            else:
+                final_upper_band.append(final_upper_band[i-1])
+                
+        final_lower_band = [0]
+        for i in range(1, len(basic_lower_band)):
+            if basic_lower_band[i] > final_lower_band[i-1] or closes[i-1] < final_lower_band[i-1]:
+                final_lower_band.append(basic_lower_band[i])
+            else:
+                final_lower_band.append(final_lower_band[i-1])
+        self.supertrend = [0]
+        for i in range(1, len(final_upper_band)):
+            if self.supertrend[i-1] == final_upper_band[i-1] and closes[i] < final_upper_band[i]:
+                self.supertrend.append(final_upper_band[i])
+            elif self.supertrend[i-1] == final_upper_band[i-1] and closes[i] > final_upper_band[i]:
+                self.supertrend.append(final_lower_band[i])
+            elif self.supertrend[i-1] == final_lower_band[i-1] and closes[i] > final_lower_band[i]:
+                self.supertrend.append(final_lower_band[i])
+            elif self.supertrend[i-1] == final_lower_band[i-1] and closes[i] < final_lower_band[i]:
+                self.supertrend.append(final_upper_band[i])
 
 def calculate_ma(data, smaPeriod):
     j = next(i for i, x in enumerate(data) if x is not None)
